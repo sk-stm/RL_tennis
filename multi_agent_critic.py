@@ -8,9 +8,9 @@ class CriticNet(nn.Module):
     def __init__(self, state_size, action_size, num_agents):
         super(CriticNet, self).__init__()
 
-        self.critic_fc1 = nn.Linear(state_size*num_agents + action_size*num_agents, 400)
-        self.critic_fc2 = nn.Linear(400, 300)
-        self.critic_fc3 = nn.Linear(300, num_agents)
+        self.critic_fc1 = nn.Linear(state_size*num_agents + action_size*num_agents, 128)
+        self.critic_fc2 = nn.Linear(128, 64)
+        self.critic_fc3 = nn.Linear(64, 1)
 
     # TODO maybe reset parameters uniformly
 

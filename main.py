@@ -133,7 +133,7 @@ def run_environment(brain_name, agent):
             score_max = score_mean
 
 
-def plot_and_save_agent(agent1, i_episode, score_max, scores, scores_mean, score_mean_list, score):
+def plot_and_save_agent(agent, i_episode, score_max, scores, scores_mean, score_mean_list, score):
     """
     Plots and saves the agent each 100th episode.
     Saves the agent, the current scores, the episode number, the trained parameters of the NN model and the hyper
@@ -151,17 +151,15 @@ def plot_and_save_agent(agent1, i_episode, score_max, scores, scores_mean, score
 
     # evaluate every so often
     if i_episode % 100 == 0 and TRAIN_MODE:
-        print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, scores_mean))
+        print('\rEpisode {}\tAverage Score: {:.4f}\t Noise weight: {:.7f}'.format(i_episode, scores_mean, agent.noise_weight))
     else:
-        print('\rEpisode {}\tScor for this episode {:.2f}:'.format(i_episode, score), end="")
-    if i_episode % 100 == 0 and TRAIN_MODE:
-        print('\nEpisode {}\tAverage Score: {:.2f}'.format(i_episode, scores_mean), end="")
-    if i_episode % 1000 == 0 and TRAIN_MODE:
+        print('\rEpisode {}\tScore for this episode {:.4f}:'.format(i_episode, score), end="")
+    if i_episode % 400 == 0 and TRAIN_MODE:
         save_score_plot(scores, score_mean_list, i_episode)
-    if scores_mean >= 0.0 and scores_mean > score_max and TRAIN_MODE:
-        agent1.save_current_agent(agent1, score_max, scores, i_episode)
+    if scores_mean >= 0.0 and scores_mean >= score_max and TRAIN_MODE:
+        agent.save_current_agent(score_max=score_max, scores=scores, score_mean_list=score_mean_list, i_episode=i_episode)
         # TODO save replay buffer parameters as well if prioritized replay buffer was used
-        print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f} '.format(i_episode - 100, scores_mean))
+        print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.4f} '.format(i_episode - 100, scores_mean))
 
 
 if __name__ == "__main__":
