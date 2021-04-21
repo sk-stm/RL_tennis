@@ -16,9 +16,9 @@ from environment import ENV_PATH
 from save_and_plot import save_score_plot
 
 env = UnityEnvironment(file_name=ENV_PATH)
-TRAIN_MODE = True
-MODEL1_TO_LOAD = ''
-MODEL2_TO_LOAD = ''
+TRAIN_MODE = False
+MODEL1_TO_LOAD = 'DDPG_TENNIS/2021_04_21_20_24_54/checkpoint_0.01.pth'
+MODEL2_TO_LOAD = 'DDPG_TENNIS/2021_04_21_20_24_54/checkpoint_agent2_0.01.pth'
 
 
 def main():
@@ -42,6 +42,10 @@ def load_model_into_agent(agent, state_size, action_size):
     actor_network = ActorNet(state_size=state_size, action_size=action_size).to(device)
     actor_network.load_state_dict(torch.load(MODEL1_TO_LOAD))
     agent.local_actor_network = actor_network
+
+    actor2_network = ActorNet(state_size=state_size, action_size=action_size).to(device)
+    actor2_network.load_state_dict(torch.load(MODEL2_TO_LOAD))
+    agent.local_actor2_network = actor_network
 
 
 def init_env():
@@ -94,7 +98,7 @@ def run_environment(brain_name, agent):
     saved_earliest_agent = False
 
     for i_episode in range(1, num_episodes + 1):
-        score = 0
+        episode_scores = np.zeros(2)
         # get first state of environment
         env_info = env.reset(train_mode=TRAIN_MODE)[brain_name]
 
@@ -117,17 +121,18 @@ def run_environment(brain_name, agent):
 
             state = next_observed_state
 
-            score += (observed_reward[0] + observed_reward[1])/2
+            episode_scores += np.array(observed_reward)
             if done[0]:
                 break
 
         # save the obtained scores
-        scores_window.append(score)
-        scores.append(score)
+        max_episode_score = np.max(episode_scores)
+        scores_window.append(max_episode_score)
+        scores.append(max_episode_score)
         score_mean = np.mean(scores_window)
         score_mean_list.append(score_mean)
 
-        plot_and_save_agent(agent, i_episode, score_max, scores, score_mean, score_mean_list, score)
+        plot_and_save_agent(agent, i_episode, score_max, scores, score_mean, score_mean_list, max_episode_score)
 
         if score_mean > score_max:
             score_max = score_mean
@@ -156,7 +161,7 @@ def plot_and_save_agent(agent, i_episode, score_max, scores, scores_mean, score_
         print('\rEpisode {}\tScore for this episode {:.4f}:'.format(i_episode, score), end="")
     if i_episode % 400 == 0 and TRAIN_MODE:
         save_score_plot(scores, score_mean_list, i_episode)
-    if scores_mean >= 0.0 and scores_mean >= score_max and TRAIN_MODE:
+    if i_episode > 100 and scores_mean >= 0.0 and scores_mean >= score_max and TRAIN_MODE:
         agent.save_current_agent(score_max=score_max, scores=scores, score_mean_list=score_mean_list, i_episode=i_episode)
         # TODO save replay buffer parameters as well if prioritized replay buffer was used
         print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.4f} '.format(i_episode, scores_mean))
