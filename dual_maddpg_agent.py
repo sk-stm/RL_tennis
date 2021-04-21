@@ -13,7 +13,7 @@ from multi_agent_critic import CriticNet
 from ornstein_uhlenbeck_process import OrnsteinUhlenbeckProcess
 from replay_buffer import ReplayBuffer
 from PARAMETERS import LR_ACTOR, LR_CRITIC, device, WEIGHT_DECAY, BUFFER_SIZE, BATCH_SIZE, NOISE_REDUCTION_FACTOR, \
-    UPDATE_EVERY, GAMMA, TAU, INITIAL_NOISE_WEIGHT
+    UPDATE_EVERY, GAMMA, TAU, NOISE_INITIAL_WEIGHT
 from save_and_plot import create_folder_structure_according_to_agent, save_score_plot
 
 class DDPGAgent:
@@ -53,7 +53,7 @@ class DDPGAgent:
 
         self.oup = OrnsteinUhlenbeckProcess(action_size=action_size)
         self.t_step = 0
-        self.noise_weight = INITIAL_NOISE_WEIGHT
+        self.noise_weight = NOISE_INITIAL_WEIGHT
 
     def act(self, state, add_noise: bool):
         """

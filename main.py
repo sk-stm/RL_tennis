@@ -16,7 +16,7 @@ from environment import ENV_PATH
 from save_and_plot import save_score_plot
 
 env = UnityEnvironment(file_name=ENV_PATH)
-TRAIN_MODE = False
+TRAIN_MODE = True
 MODEL1_TO_LOAD = 'DDPG_TENNIS/2021_04_21_20_24_54/checkpoint_0.01.pth'
 MODEL2_TO_LOAD = 'DDPG_TENNIS/2021_04_21_20_24_54/checkpoint_agent2_0.01.pth'
 
