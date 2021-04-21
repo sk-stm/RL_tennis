@@ -9,7 +9,7 @@ class OrnsteinUhlenbeckProcess:
         self.action_size = action_size
 
     def sample(self):
-        x = self.prev_x + THETA * (MU + self.prev_x) + SIGMA * np.random.randn(*(self.action_size,))
+        x = self.prev_x + THETA * (MU - self.prev_x) + SIGMA * np.random.randn(*(self.action_size,))
         self.prev_x = x
         return x
 
