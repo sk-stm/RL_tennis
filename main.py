@@ -159,7 +159,7 @@ def plot_and_save_agent(agent, i_episode, score_max, scores, scores_mean, score_
     if scores_mean >= 0.0 and scores_mean >= score_max and TRAIN_MODE:
         agent.save_current_agent(score_max=score_max, scores=scores, score_mean_list=score_mean_list, i_episode=i_episode)
         # TODO save replay buffer parameters as well if prioritized replay buffer was used
-        print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.4f} '.format(i_episode - 100, scores_mean))
+        print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.4f} '.format(i_episode, scores_mean))
 
 
 if __name__ == "__main__":

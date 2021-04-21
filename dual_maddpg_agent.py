@@ -16,7 +16,6 @@ from PARAMETERS import LR_ACTOR, LR_CRITIC, device, WEIGHT_DECAY, BUFFER_SIZE, B
     UPDATE_EVERY, GAMMA, TAU, INITIAL_NOISE_WEIGHT
 from save_and_plot import create_folder_structure_according_to_agent, save_score_plot
 
-
 class DDPGAgent:
 
     def __init__(self, state_size, action_size):
@@ -30,23 +29,27 @@ class DDPGAgent:
         self.local_actor_network = ActorNet(state_size=state_size, action_size=action_size).to(device)
         self.target_actor_network = ActorNet(state_size=state_size, action_size=action_size).to(device)
         self.actor_optimizer = optim.Adam(self.local_actor_network.parameters(), lr=LR_ACTOR)
+        self.hard_update(self.target_actor_network, self.local_actor_network)
 
         # define actor networks
         self.local_actor2_network = ActorNet(state_size=state_size, action_size=action_size).to(device)
         self.target_actor2_network = ActorNet(state_size=state_size, action_size=action_size).to(device)
         self.actor2_optimizer = optim.Adam(self.local_actor2_network.parameters(), lr=LR_ACTOR)
+        self.hard_update(self.target_actor2_network, self.local_actor2_network)
 
         # define critic networks
         self.local_critic_network = CriticNet(state_size=state_size, action_size=action_size, num_agents=2).to(device)
         self.target_critic_network = CriticNet(state_size=state_size, action_size=action_size, num_agents=2).to(device)
         self.critic_optimizer = optim.Adam(self.local_critic_network.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
+        self.hard_update(self.target_critic_network, self.local_critic_network)
 
         # define critic networks
         self.local_critic2_network = CriticNet(state_size=state_size, action_size=action_size, num_agents=2).to(device)
         self.target_critic2_network = CriticNet(state_size=state_size, action_size=action_size, num_agents=2).to(device)
         self.critic2_optimizer = optim.Adam(self.local_critic2_network.parameters(), lr=LR_CRITIC,weight_decay=WEIGHT_DECAY)
+        self.hard_update(self.target_critic2_network, self.local_critic2_network)
 
-        self.memory = ReplayBuffer(action_size*2, BUFFER_SIZE, BATCH_SIZE, random.seed(0))
+        self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, random.seed(0))
 
         self.oup = OrnsteinUhlenbeckProcess(action_size=action_size)
         self.t_step = 0
@@ -93,7 +96,7 @@ class DDPGAgent:
 
         return np.concatenate((action, action2))
 
-    def step(self, state, actions, next_observed_state, observed_reward, done):
+    def step(self, states, actions, next_observed_state, observed_reward, done):
         """
         Adds the current state, the taken action, next state, reward and done to the replay memory. Performs
         learning with the actor and critic networks.
@@ -105,9 +108,9 @@ class DDPGAgent:
         :param done:                Indicator if the episode is done or not
         """
 
-        # TODO this done thingy only works beacause both agents spawn and die together in the tennis env
+        # TODO this done thingy only works because both agents spawn and die together in the tennis env
         done_value = int(done[0] == True)
-        self.memory.add(state, actions, observed_reward, next_observed_state, done_value)
+        self.memory.add(states, actions, observed_reward, next_observed_state, done_value)
 
         self.t_step = (self.t_step + 1) % UPDATE_EVERY
         if self.t_step == 0:
@@ -130,18 +133,23 @@ class DDPGAgent:
 
         combined_next_target_actions = torch.cat((next_target_action, next_target_action2), 1).detach()
         combined_next_state = torch.cat((next_state[:BATCH_SIZE], next_state[BATCH_SIZE:]), 1).detach()
+        combined_state = torch.cat((state[:BATCH_SIZE], state[BATCH_SIZE:]), 1).detach()
+
+        # the data compartition is not too straight forward?
+        combined_actions = actions.detach()
 
         ############## CRITIC 1 #########################
         # evaluate the chosen next_action by the critic
-        next_state_value = self.target_critic_network(combined_next_state, combined_next_target_actions)
-        target_critic_value_for_next_state = rewards[:, 0] + GAMMA * (1-dones.squeeze()) * next_state_value.squeeze()
+        with torch.no_grad():
+            Q_targets_next = self.target_critic_network(combined_next_state, combined_next_target_actions)
+        Q_targets = rewards[:, 0] + GAMMA * (1-dones.squeeze()) * Q_targets_next.squeeze()
 
         # obtain the local critics evaluation of the state
-        local_value_current_state = self.local_critic_network(combined_next_state, combined_next_target_actions).squeeze()
+        Q_expected = self.local_critic_network(combined_state, combined_actions).squeeze()
 
         # formulate a loss to drive the local critics estimation more towards the target critics evaluation including
         # the received reward
-        critic_loss = F.mse_loss(local_value_current_state, target_critic_value_for_next_state)
+        critic_loss = F.mse_loss(Q_expected, Q_targets.detach())
 
         # train the critic
         self.local_critic_network.zero_grad()
@@ -151,15 +159,16 @@ class DDPGAgent:
 
         ################## CRITIC 2 #############################
         # evaluate the chosen next_action by the critic
-        next_state_value2 = self.target_critic2_network(combined_next_state, combined_next_target_actions)
-        target_critic2_value_for_next_state = rewards[:, 1] + GAMMA * (1 - dones.squeeze()) * next_state_value2.squeeze()
+        with torch.no_grad():
+            Q_targets_next2 = self.target_critic2_network(combined_next_state, combined_next_target_actions)
+        Q_targets2 = rewards[:, 1] + GAMMA * (1 - dones.squeeze()) * Q_targets_next2.squeeze()
 
         # obtain the local critics evaluation of the state
-        local_value2_current_state = self.local_critic2_network(combined_next_state, combined_next_target_actions).squeeze()
+        Q_expected2 = self.local_critic2_network(combined_next_state, combined_actions).squeeze()
 
         # formulate a loss to drive the local critics estimation more towards the target critics evaluation including
         # the received reward
-        critic_loss2 = F.mse_loss(local_value2_current_state, target_critic2_value_for_next_state)
+        critic_loss2 = F.mse_loss(Q_expected2, Q_targets2.detach())
 
         # train the critic
         self.local_critic2_network.zero_grad()
@@ -173,9 +182,6 @@ class DDPGAgent:
         # evaluate that action with the local critic to formulate a loss in the action according to its evaluation
         # important is the '-' in front because pytorch performs gradient decent but we want to maximize the value
         # of the critic
-
-        # TODO check if I have to detach the combined_state from the graph to prevent gradient flow to the critic
-        combined_state = torch.cat((state[:BATCH_SIZE], state[BATCH_SIZE:]), 1).detach()
 
         combined_actions = torch.cat((action, action2.detach()), 1)
         combined_actions2 = torch.cat((action.detach(), action2), 1)
@@ -198,17 +204,26 @@ class DDPGAgent:
         self.soft_update(self.local_critic_network, self.target_critic_network, TAU)
         self.soft_update(self.local_critic2_network, self.target_critic2_network, TAU)
 
-    def soft_update(self, local_model, target_model, tau):
+    def soft_update(self, source_model, target_model, tau):
         """
         Soft update model parameters.
         θ_target = τ*θ_local + (1 - τ)*θ_target
 
-        :param local_model: (PyTorch model) weights will be copied from
+        :param source_model: (PyTorch model) weights will be copied from
         :param target_model: (PyTorch model) weights will be copied to
         :param tau: (float) interpolation parameter
         """
-        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
+        for target_param, local_param in zip(target_model.parameters(), source_model.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
+
+    def hard_update(self, source_model, target_model):
+        """
+        Copy network parameters from source to target
+        Inputs:
+            target (torch.nn.Module): Net to copy parameters to
+            source (torch.nn.Module): Net whose parameters to copy
+        """
+        return self.soft_update(source_model, target_model, tau=1.)
 
     def load_model_into_DDPG_agent(self, model_path):
         """

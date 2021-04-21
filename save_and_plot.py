@@ -28,8 +28,9 @@ def save_score_plot(scores: List, score_mean_list: int, i_episode: int, path: st
     :param i_episode:   Current number of episodes
     :param path:        Path to the folder to store the plot to.
     """
-    plt.plot(np.arange(len(scores)), scores)
+    plt.plot(np.arange(len(scores)), scores, 'bo', alpha=0.1)
     plt.plot(np.arange(len(score_mean_list)), score_mean_list, 'C1')
     plt.ylabel('Score')
     plt.xlabel('Episode #')
-    plt.savefig(os.path.join(path, f'score_plot_{i_episode}.jpg'))
+    plt.savefig(os.path.join(path, f'score_plot.png'))
+    plt.show(block=False)
