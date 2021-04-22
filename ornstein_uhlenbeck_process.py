@@ -11,6 +11,7 @@ class OrnsteinUhlenbeckProcess:
     def __init__(self, action_size):
         self.prev_x = np.zeros(action_size)
         self.action_size = action_size
+        self.reset_process()
 
     def sample(self):
         """
