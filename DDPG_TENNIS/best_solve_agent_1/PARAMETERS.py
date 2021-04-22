@@ -1,0 +1,47 @@
+import torch
+
+# MADDPG
+# # LEARNING PARAMETERS
+# GAMMA = 0.99
+# BATCH_SIZE = 256
+# BUFFER_SIZE = int(1e6)
+# TAU = 1e-2
+# LR_ACTOR = 1e-3
+# LR_CRITIC = 1e-3
+# WEIGHT_DECAY = 0.00001
+# UPDATE_EVERY = 1
+#
+# # NOISE PARAMETERS
+# INITIAL_NOISE_WEIGHT = 0.2
+# NOISE_REDUCTION_FACTOR = 0.999
+# THETA = 0.15
+# MU = 0
+# SIGMA = 0.1
+#
+# SAVE_DISTANCE = 0.005
+#
+# # DEVICE PARAMETERS
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+#DDPG
+# LEARNING PARAMETERS
+GAMMA = 0.99
+BATCH_SIZE = 128
+BUFFER_SIZE = int(1e6)
+TAU = 1e-3
+LR_ACTOR = 1e-4
+LR_CRITIC = 1e-4
+WEIGHT_DECAY = 0.
+UPDATE_EVERY = 1
+
+# NOISE PARAMETERS
+INITIAL_NOISE_WEIGHT = 1 # 0.2
+NOISE_REDUCTION_FACTOR = 1
+THETA = 0.15
+MU = 0
+SIGMA = 0.2 #0.1
+
+SAVE_DISTANCE = 0.01
+
+# DEVICE PARAMETERS
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

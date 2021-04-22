@@ -2,7 +2,7 @@
 
 ## Project description
 
-![Earlies solution to the environment](DDPG_TENNIS/tennis_big.gif)
+![Environment gif](DDPG_TENNIS/tennis_big.gif)
 
 Two agent play a cooperative match of tennis. That is, in a 2D environment they play the ball over a net and
 receive points if they succeed.
@@ -26,17 +26,17 @@ The environment is considered solved if the agent get an **average reward of >=0
     - `source p3_env/bin/activate`
     - `pip install -U pip`
 2. Clone repository:
-    - `git clone https://github.com/sk-stm/RL_robot_arm_control.git`
-    - `cd RL_robot_arm_control`
+    - `git clone https://github.com/sk-stm/RL_tennis.git`
+    - `cd RL_tennis`
     - `pip install -r requirements.txt`
 3. Follow the instructions to perform a minimal install of the environment for you system in https://github.com/openai/gym#installation
 4. Select the environment according to your system:
-    - Set the `ENV_PATH` variable in `main.py` to the path to the file that holds the appropriate environment for your system.
+    - Set the `ENV_PATH` variable in `environment.py` to the path to the file that holds the appropriate environment for your system.
     You can download your specific environment:
-        - Linux: [here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/one_agent/Reacher_Linux.zip)
-        - Max OS: [here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/one_agent/Reacher.app.zip)
-        - Windows 32Bit: [here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/one_agent/Reacher_Windows_x86.zip)
-        - Windows 64Bit: [here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/one_agent/Reacher_Windows_x86_64.zip)
+        - Linux: [here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis_Linux.zip)
+        - Max OS: [here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis.app.zip)
+        - Windows 32Bit: [here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis_Windows_x86.zip)
+        - Windows 64Bit: [here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis_Windows_x86_64.zip)
 
 ## Run training:
 1. Set the `TRAIN_MODE` variable in `main.py` to `True`
