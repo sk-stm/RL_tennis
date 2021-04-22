@@ -7,8 +7,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from maddpg_actor_net import ActorNet
-from maddpg_critic_net import CriticNet
+from ddpg_actor_net import ActorNet
+from ddpg_critic_net import CriticNet
 from ornstein_uhlenbeck_process import OrnsteinUhlenbeckProcess
 from replay_buffer import ReplayBuffer
 from PARAMETERS import LR_ACTOR, LR_CRITIC, device, WEIGHT_DECAY, BUFFER_SIZE, BATCH_SIZE, NOISE_REDUCTION_FACTOR, \
@@ -16,7 +16,7 @@ from PARAMETERS import LR_ACTOR, LR_CRITIC, device, WEIGHT_DECAY, BUFFER_SIZE, B
 from save_and_plot import create_folder_structure_according_to_agent, save_score_plot
 
 
-class MADDPGAgent:
+class DPGAgent:
 
     def __init__(self, state_size, action_size, agent_index):
         """
@@ -25,12 +25,10 @@ class MADDPGAgent:
         :param state_size:  dimensionality of the state space
         :param action_size: dimensionality of the action space
         """
-        # define actor networks
         self.local_actor_network = ActorNet(state_size=state_size, action_size=action_size).to(device)
         self.target_actor_network = ActorNet(state_size=state_size, action_size=action_size).to(device)
         self.actor_optimizer = optim.Adam(self.local_actor_network.parameters(), lr=LR_ACTOR)
 
-        # define critic networks
         self.local_critic_network = CriticNet(state_size=state_size, action_size=action_size, num_agents=2).to(device)
         self.target_critic_network = CriticNet(state_size=state_size, action_size=action_size, num_agents=2).to(device)
         self.critic_optimizer = optim.Adam(self.local_critic_network.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
@@ -52,7 +50,8 @@ class MADDPGAgent:
         :param add_noise:   if True, will add noise to an action given by the Ornstein-Uhlenbeck-Process
         :return:            chosen action
         """
-        state_tensor = torch.from_numpy(state[self.agent_index]).float().to(device)
+        concat_state = np.concatenate(state, 0)
+        state_tensor = torch.from_numpy(concat_state).float().to(device)
 
         # important to NOT create a gradient here because it's done later during learning and doing it twice corrupts
         # the gradients
@@ -78,7 +77,7 @@ class MADDPGAgent:
 
         return action
 
-    def step(self, other_agent, state, actions, next_observed_state, observed_reward, done):
+    def step(self, state, action, next_observed_state, observed_reward, done):
         """
         Adds the current state, the taken action, next state, reward and done to the replay memory. Performs
         learning with the actor and critic networks.
@@ -90,89 +89,80 @@ class MADDPGAgent:
         :param done:                Indicator if the episode is done or not
         """
 
-        # TODO this done thingy only works beacause both agents spawn and die together in the tennis env
-        done_value = int(done[0] == True)
-        #TODO only works for 2 agents!
+        # TODO test if this holds the correct value
+        done_value = int(done == True)
         concat_states_1d = np.concatenate((state[0], state[1]))
         next_states_1d = np.concatenate((next_observed_state[0], next_observed_state[1]))
 
-        self.memory.add(concat_states_1d, actions, observed_reward, next_states_1d, done_value)
+        self.memory.add(concat_states_1d, action, observed_reward, next_states_1d, done_value)
 
         self.t_step = (self.t_step + 1) % UPDATE_EVERY
         if self.t_step == 0:
 
             if len(self.memory) > BATCH_SIZE:
                 experiences = self.memory.sample()
-                self.learn(experiences, other_agent)
+                self.learn(experiences)
 
-    def learn(self, experiences, other_agent):
+    def learn(self, experiences):
         """
         Perform learning of the agent.
 
         :param experiences: Sample of size: batch size from the replay buffer.
         """
-        state, actions, rewards, next_state, dones = experiences
+        state, action, reward, next_state, dones = experiences
+        next_target_action = self.target_actor_network(next_state).detach()
 
-        # run target actor to get next best action for the next_state
-        if self.agent_index == 0:
-            agent_next_states = next_state[:, :self.state_size]
-            other_agent_next_state = next_state[:, self.state_size:]
-        else:
-            agent_next_states = next_state[:, self.state_size:]
-            other_agent_next_state = next_state[:, :self.state_size]
+        self._learn_critic(action, dones, next_state, next_target_action, reward, state)
+        self._learn_actor(state)
 
-        next_target_action = self.target_actor_network(agent_next_states).detach()
-        other_agent_next_target_action = other_agent.target_actor_network(other_agent_next_state).detach()
+        # perform soft updates from the local networks to the targets to converge towards better evaluation values.
+        self._soft_update(self.local_actor_network, self.target_actor_network, TAU)
+        self._soft_update(self.local_critic_network, self.target_critic_network, TAU)
 
-        combined_next_target_actions = torch.cat((next_target_action, other_agent_next_target_action), 1).detach()
+    def _learn_actor(self, state):
+        """
+        Calculates the loss and performs gradient decent on the actor network.
 
-        ############## CRITIC  #########################
-        # evaluate the chosen next_action by the critic
-        next_state_value = self.target_critic_network(next_state, combined_next_target_actions).detach()
-        target_critic_value_for_next_state = rewards[:, self.agent_index] + GAMMA * (1-dones.squeeze()) * next_state_value.squeeze()
-
-        # obtain the local critics evaluation of the state
-        local_value_current_state = self.local_critic_network(state, actions).squeeze()
-
-        # formulate a loss to drive the local critics estimation more towards the target critics evaluation including
-        # the received reward
-        critic_loss = F.mse_loss(local_value_current_state, target_critic_value_for_next_state)
-
-        # train the critic
-        self.local_critic_network.zero_grad()
-        critic_loss.backward()
-        self.critic_optimizer.step()
-
-        ################# ACTOR #####################
-        if self.agent_index == 0:
-            agent_states = state[:, :self.state_size]
-            other_agent_state = state[:, self.state_size:]
-        else:
-            agent_states = state[:, self.state_size:]
-            other_agent_state = state[:, :self.state_size]
-
+        :param state: states to train on (sampled from the experience buffer)
+        """
         # get forward pass for local actor on the current state to create an action.
-        action = self.local_actor_network(agent_states)
-        other_agent_action = other_agent.local_actor_network(other_agent_state).detach()
+        action = self.local_actor_network(state)
         # evaluate that action with the local critic to formulate a loss in the action according to its evaluation
         # important is the '-' in front because pytorch performs gradient decent but we want to maximize the value
         # of the critic
-
-        # TODO check if I have to detach the combined_state from the graph to prevent gradient flow to the critic
-        combined_actions = torch.cat((action, other_agent_action), 1)
-
-        policy_loss = -self.local_critic_network(state, combined_actions).mean()
-
+        policy_loss = -self.local_critic_network(state, action).mean()
         # learn the actor network
         self.local_actor_network.zero_grad()
         policy_loss.backward()
         self.actor_optimizer.step()
 
-        # perform soft updates from the local networks to the targets to converge towards better evaluation values.
-        self.soft_update(self.local_actor_network, self.target_actor_network, TAU)
-        self.soft_update(self.local_critic_network, self.target_critic_network, TAU)
+    def _learn_critic(self, action, dones, next_state, next_target_action, reward, state):
+        """
+        Calculates the loss and performs gradient decent on the critic network. Each parameter is taken from the
+        experience buffer and therefore is a list of values for each entry in the experience buffer. The length
+        of the vector is determined by the batch size.
 
-    def soft_update(self, local_model, target_model, tau):
+        :param action:              actions taken by the actor according to the sampled states from the experience buffer
+        :param dones:               Vector indicating if the agent terminated or not
+        :param next_state:          Next state of the agent after taking "action" in the current state
+        :param next_target_action:  best action according to the target network
+        :param reward:              received rewards after taking the action
+        :param state:               current state of the environment
+        """
+        # evaluate the chosen next_action by the critic
+        next_state_value = self.target_critic_network(next_state, next_target_action).detach()
+        target_critic_value_for_next_state = reward + GAMMA * (1 - dones.squeeze()) * next_state_value.squeeze()
+        # obtain the local critics evaluation of the state
+        local_value_current_state = self.local_critic_network(state, action).squeeze()
+        # formulate a loss to drive the local critics estimation more towards the target critics evaluation including
+        # the received reward
+        critic_loss = F.mse_loss(local_value_current_state, target_critic_value_for_next_state)
+        # train the critic
+        self.local_critic_network.zero_grad()
+        critic_loss.backward()
+        self.critic_optimizer.step()
+
+    def _soft_update(self, local_model, target_model, tau):
         """
         Soft update model parameters.
         θ_target = τ*θ_local + (1 - τ)*θ_target

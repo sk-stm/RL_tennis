@@ -3,7 +3,7 @@ import torch
 ENV_PATH = '../Tennis_Linux/Tennis.x86'
 MODEL1_TO_LOAD = ''
 MODEL2_TO_LOAD = ''
-AGENT_TYPE = 'DDPG'
+AGENT_TYPE = 'MADDPG'
 ENV_NAME = 'TENNIS'
 NEEDED_REWARD_FOR_SOLVING_ENV = 0.5
 

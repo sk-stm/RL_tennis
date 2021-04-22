@@ -139,3 +139,84 @@ NOISE_REDUCTION_FACTOR = 0.99999
 THETA = 0.15
 MU = 0
 SIGMA = 0.2
+
+
+-> changed the implementation so that the experiece replay is collected by each agent independently
+Increased noise in the beginning and reduced it a bit faster
+Reduced the memory buffer to 1000 because [here](https://arxiv.org/pdf/1908.03963.pdf) the they say that
+"asically, the policy that generates the data for the replay memoryis different than the current policy
+so that the learned policy of each agent can be misleading. Inorder to address this issue,
+[38](https://arxiv.org/pdf/1605.06676v2.pdf)
+disables the replay memorypart of the algorithm, or in [78](https://arxiv.org/pdf/1702.03037.pdf)
+the old transitions are discarded and the replay memory uses only the recent experiences"
+
+# Exp 7
+GAMMA = 0.99
+BATCH_SIZE = 64
+BUFFER_SIZE = int(1e3)
+TAU = 1e-1
+LR_ACTOR = 5e-3
+LR_CRITIC = 5e-3
+WEIGHT_DECAY = 0.0001
+UPDATE_EVERY = 5
+
+# NOISE PARAMETERS
+INITIAL_NOISE_WEIGHT = 0.3
+NOISE_REDUCTION_FACTOR = 0.9999
+THETA = 0.0
+MU = 0
+SIGMA = 0.8
+
+SAVE_DISTANCE = 0.005
+
+-> trains and holds 0.005 rewards
+
+# Exp 8
+
+GAMMA = 0.99
+BATCH_SIZE = 128
+BUFFER_SIZE = int(1e6)
+TAU = 1e-1
+LR_ACTOR = 1e-3
+LR_CRITIC = 1e-3
+WEIGHT_DECAY = 0.00001
+UPDATE_EVERY = 5
+
+# NOISE PARAMETERS
+INITIAL_NOISE_WEIGHT = 0.2
+NOISE_REDUCTION_FACTOR = 0.9999
+THETA = 0.15
+MU = 0
+SIGMA = 0.1
+
+SAVE_DISTANCE = 0.005
+
+-> converges to ~0.02 reward nice!
+
+# Exp 9
+
+GAMMA = 0.99
+BATCH_SIZE = 128
+BUFFER_SIZE = int(1e6)
+TAU = 1e-1
+LR_ACTOR = 1e-3
+LR_CRITIC = 1e-3
+WEIGHT_DECAY = 0.00001
+UPDATE_EVERY = 5
+
+# NOISE PARAMETERS
+INITIAL_NOISE_WEIGHT = 0.2
+NOISE_REDUCTION_FACTOR = 0.99999
+THETA = 0.15
+MU = 0
+SIGMA = 0.1
+
+SAVE_DISTANCE = 0.005
+
+-> same same
+
+Found the problem of the Ornstein Uhlenbeck process being calculated wrongly and therefore exploded
+Wo wonder it didn't work out..
+
+After that it worked with simply 2 ddpg agents.
+

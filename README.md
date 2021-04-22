@@ -1,31 +1,29 @@
-# REINFORCEMENT LEARNING FOR UNITY BANANA PROJECT
+# REINFORCEMENT LEARNING FOR UNITY TENNIS PROJECT
 
 ## Project description
 
-An agent has to reach a moving target position in an simulated environment.
-The objective is to keep the end effector of the robot arn inside the designated area for al long as possible.
+![Earlies solution to the environment](DDPG_TENNIS/tennis_big.gif)
 
-The environment is written in UNITY which can be observed through a continuous 37 dimensional statespace.
-The statespace contains information about the position of the agent arm in the environment, and about target.
-Thus the world is completely observed by the agent.
-Additionally the world keeps changing over time the target moves in a circle around the agent.
+Two agent play a cooperative match of tennis. That is, in a 2D environment they play the ball over a net and
+receive points if they succeed.
 
-The agent can perform 4 continuous actions, that are applying a torque of (-1, 1) to each of it's 4 joints.
+The environment is written in UNITY which can be observed through a continuous 48 dimensional statespace.
+The statespace contains information about the position of the agents and the position and velocity of the ball
+in the environment. Thus the world is completely observed by both agents.
 
-When the end effector of the agent is inside the target area, it get's a reward of 0.1, else a reward of 0 is given.
+The agent can perform 2 continuous actions, that are moving towards and away from the net and jumping.
 
-*NOTE*: In the linux environment the reward given by the environment is different from the reward in the documentation,
-so I artificially changes the reward to what it should have been. It would be nice to eliminate that bug for this
-environment in future versions.
+If an agent hits the ball over the net, it receives a reward of +0.1. If an agent lets a ball hit the ground or
+hits the ball out of bounds, it receives a reward of -0.01. Thus, the goal of each agent is to keep the ball in play.
 
 ## Project goal
-The environment is considered solved if the agent get an **average reward of >=30** in 100 consecutive runs.
+The environment is considered solved if the agent get an **average reward of >=0.5** in 100 consecutive runs.
 
 ## Installation
 
 1. Create virtual python environment and source it:
-    - `python3.6 -m venv p2_env`
-    - `source p2_env/bin/activate`
+    - `python3.6 -m venv p3_env`
+    - `source p3_env/bin/activate`
     - `pip install -U pip`
 2. Clone repository:
     - `git clone https://github.com/sk-stm/RL_robot_arm_control.git`

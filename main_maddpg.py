@@ -3,30 +3,30 @@ from collections import deque
 from unityagents import UnityEnvironment
 import numpy as np
 import torch
-from PARAMETERS import device, SAVE_DISTANCE, NUM_EPISODES
-from ddpg_actor_net import ActorNet
+from PARAMETERS import device, SAVE_DISTANCE
+from maddpg_actor_net import ActorNet
 
-from ddpg_agent import DPGAgent
+from dual_maddpg_agent import MADDPGAgent
 from environment import ENV_PATH
 from save_and_plot import save_score_plot
 
 env = UnityEnvironment(file_name=ENV_PATH)
-TRAIN_MODE = False
-MODEL1_TO_LOAD = 'DDPG_TENNIS/best_solve_agent_1/checkpoint_0_0.57.pth'
-MODEL2_TO_LOAD = 'DDPG_TENNIS/best_solve_agent_2/checkpoint_1_0.57.pth'
+TRAIN_MODE = True
+MODEL1_TO_LOAD = ''
+MODEL2_TO_LOAD = ''
 
 
 def main():
     brain_name, num_agents, agent_states, state_size, action_size = init_env()
 
-    agent_kournikova = DPGAgent(state_size=state_size, action_size=action_size, agent_index=0)
-    agent_agassi = DPGAgent(state_size=state_size, action_size=action_size, agent_index=1)
+    agent_bob = MADDPGAgent(state_size=state_size, action_size=action_size, agent_index=0)
+    agent_emily = MADDPGAgent(state_size=state_size, action_size=action_size, agent_index=1)
 
-    agents = [agent_kournikova, agent_agassi]
+    agents = [agent_bob, agent_emily]
 
     if not TRAIN_MODE:
-        load_model_into_agent(agent_kournikova, state_size, action_size, MODEL1_TO_LOAD)
-        load_model_into_agent(agent_agassi, state_size, action_size, MODEL2_TO_LOAD)
+        load_model_into_agent(agent_bob, state_size, action_size, MODEL1_TO_LOAD)
+        load_model_into_agent(agent_emily, state_size, action_size, MODEL2_TO_LOAD)
 
     run_environment(brain_name, agents)
 
@@ -74,6 +74,9 @@ def init_env():
     return brain_name, num_agents, agent_states, state_size, action_size
 
 
+num_episodes = 100000
+
+
 def run_environment(brain_name, agents):
     """
     Runs the environment and the agent.
@@ -87,13 +90,13 @@ def run_environment(brain_name, agents):
     scores = []
     score_mean_list = []
 
-    for i_episode in range(1, NUM_EPISODES + 1):
+    for i_episode in range(1, num_episodes + 1):
         score = 0
         score1 = 0
         score2 = 0
-
         # get first state of environment
         env_info = env.reset(train_mode=TRAIN_MODE)[brain_name]
+
         state = env_info.vector_observations
 
         for agent in agents:
@@ -102,15 +105,25 @@ def run_environment(brain_name, agents):
         # TODO make this a variable depending on the environment (episode length)
         for i_times in range(1000):
 
-            action1, \
-            action2, \
-            done, \
-            next_observed_state, \
-            observed_reward = act_in_environment(agents, brain_name, state)
+            actions = []
+            actions.append(agents[0].act(state, add_noise=TRAIN_MODE))
+            actions.append(agents[1].act(state, add_noise=TRAIN_MODE))
+            actions = np.array(actions)
+            actions = np.concatenate(actions, 0)
+
+            env_info = env.step(actions)[brain_name]
+            next_observed_state = env_info.vector_observations
+            observed_reward = env_info.rewards
+            done = env_info.local_done
 
             if TRAIN_MODE:
-                agents[0].step(state, action1, next_observed_state, observed_reward[0], done[0])
-                agents[1].step(state, action2, next_observed_state, observed_reward[1], done[1])
+                for i, agent in enumerate(agents):
+                    # TODO this only works for 2 agents
+                    other_agent_idx = 0
+                    if i == 0:
+                        other_agent_idx = 1
+                    other_agent = agents[other_agent_idx]
+                    agent.step(other_agent, state, actions, next_observed_state, observed_reward, done)
 
             state = next_observed_state
 
@@ -120,42 +133,16 @@ def run_environment(brain_name, agents):
             if any(done):
                 break
 
-        score_mean = save_optained_scores_to_list(score, score_mean_list, scores, scores_window)
+        # save the obtained scores
+        scores_window.append(score)
+        scores.append(score)
+        score_mean = np.mean(scores_window)
+        score_mean_list.append(score_mean)
 
         plot_and_save_agent(agents, i_episode, score_max, scores, score_mean, score_mean_list, score)
 
         if score_mean > score_max + SAVE_DISTANCE:
             score_max = score_mean
-
-
-def save_optained_scores_to_list(score, score_mean_list, scores, scores_window):
-    scores_window.append(score)
-    scores.append(score)
-    score_mean = np.mean(scores_window)
-    score_mean_list.append(score_mean)
-    return score_mean
-
-
-def act_in_environment(agents, brain_name, state):
-    """
-    Let agent act in the environment
-
-    :param agents:      all agents to act
-    :param brain_name:  brain name for unity environment
-    :param state:       state of the environment
-    :return: actions for each agent, vector if agents finished, next_state for each agent, reward for each agent
-    """
-    action1 = agents[0].act(state, add_noise=TRAIN_MODE)
-    action2 = agents[1].act(state, add_noise=TRAIN_MODE)
-    concat_actions = np.array([action1, action2])
-    concat_actions = np.concatenate(concat_actions, 0)
-
-    env_info = env.step(concat_actions)[brain_name]
-    next_observed_state = env_info.vector_observations
-    observed_reward = env_info.rewards
-    done = env_info.local_done
-
-    return action1, action2, done, next_observed_state, observed_reward
 
 
 def plot_and_save_agent(agents, i_episode, score_max, scores, scores_mean, score_mean_list, score):
