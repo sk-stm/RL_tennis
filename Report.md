@@ -115,15 +115,23 @@ The reward > 0.5 was achieved after 12596 episodes. The next figure shows the le
 
 The agent act stable in the environment mit a long period of time and therefore learned to cooperate.
 
-
-# TODO network parameters:
-## ACOTR
-## CRITIC
-
-
-
-# Best performace parameters for DDPG:
+# Parameters for DDPG:
 ### LEARNING PARAMETERS
-
+- GAMMA = 0.99
+- BATCH_SIZE = 128
+- BUFFER_SIZE = int(1e6)
+- TAU = 1e-3
+- LR_ACTOR = 1e-4
+- LR_CRITIC = 1e-4
+- WEIGHT_DECAY = 0.
+- UPDATE_EVERY = 1
+- NUM_EPISODES = 100000
 
 ### NOISE PARAMETERS
+- INITIAL_NOISE_WEIGHT = 1
+- NOISE_REDUCTION_FACTOR = 1
+- THETA = 0.15
+- MU = 0
+- SIGMA = 0.2
+
+SAVE_DISTANCE = 0.01
