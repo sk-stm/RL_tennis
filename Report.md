@@ -104,6 +104,11 @@ agents actor only perceives it's own local state of the environment and acts acc
 Besides this the algorithm works just like single agent DDPG which is described in
 [my other repository](https://github.com/sk-stm/RL_robot_arm_control/blob/main/Report.md).
 
+Unfortunately the implementation and training is not complete yet. I didn't have time to tune the parameters
+of my MADDPG to solve the environment yet. However, I intend to do that in the future since this is a very natural
+ extension of the DDPG algorithm in project 2. Therefore this repository contains the code of MADDPG but not a solution
+ based on that algirthm.
+
 # Results
 The rewards received by my best agent of this type can be shown in this figure:
 
@@ -113,7 +118,7 @@ This agent was trained for 13242 episodes and reached an average reward of 0.57 
 The reward > 0.5 was achieved after 12596 episodes. The next figure shows the learning process of that agent.
 ![Earlies solution to the environment](DDPG_TENNIS/earliest_solve_agent_1/score_plot_12596.jpg)
 
-The agent act stable in the environment mit a long period of time and therefore learned to cooperate.
+The agents act stable in the environment for a long period of time and therefore learned to cooperate.
 
 # Parameters for DDPG:
 ### LEARNING PARAMETERS
