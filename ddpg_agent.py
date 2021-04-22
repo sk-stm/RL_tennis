@@ -33,7 +33,7 @@ class DPGAgent:
         self.target_critic_network = CriticNet(state_size=state_size, action_size=action_size, num_agents=2).to(device)
         self.critic_optimizer = optim.Adam(self.local_critic_network.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
 
-        self.memory = ReplayBuffer(action_size*2, BUFFER_SIZE, BATCH_SIZE, random.seed(0))
+        self.memory = ReplayBuffer(action_size*2, BUFFER_SIZE, BATCH_SIZE)
 
         self.agent_index = agent_index
         self.state_size = state_size
